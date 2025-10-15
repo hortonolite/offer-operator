@@ -3,8 +3,10 @@ mod crd;
 use std::sync::Arc;
 use futures::StreamExt;
 use kube::{
-    api::ListParams,
-    runtime::controller::{self, Controller},
+    runtime::{
+        controller::{self, Controller},
+        watcher,
+    },
     Api, Client,
 };
 use tracing::*;
@@ -19,11 +21,11 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Starting offer-operator... watching OfferDeployments");
 
-    Controller::new(api, ListParams::default())
+    Controller::new(api, watcher::Config::default())
         .run(reconcile, error_policy, Arc::new(()))
         .for_each(|res| async move {
             match res {
-                Ok(obj) => info!("Reconciled: {:?}", obj),
+                Ok(action) => info!("Reconciliation complete: {:?}", action),
                 Err(err) => error!("Reconcile failed: {:?}", err),
             }
         })
@@ -32,11 +34,18 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn reconcile(_obj: Arc<OfferDeployment>, _ctx: Arc<()>) -> Result<(), kube::Error> {
+async fn reconcile(
+    _obj: Arc<OfferDeployment>,
+    _ctx: Arc<()>,
+) -> Result<controller::Action, kube::Error> {
     info!("Got OfferDeployment event");
-    Ok(())
+    Ok(controller::Action::await_change())
 }
 
-fn error_policy(_err: &kube::Error, _ctx: Arc<()>) -> controller::Action {
+fn error_policy(
+    _obj: Arc<OfferDeployment>,
+    _err: &kube::Error,
+    _ctx: Arc<()>,
+) -> controller::Action {
     controller::Action::requeue(std::time::Duration::from_secs(60))
 }
