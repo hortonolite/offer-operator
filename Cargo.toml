@@ -13,4 +13,4 @@ tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 anyhow = { version = "1" }
 futures = { version = "0.3" }
-schemars = { version = "1", features = ["derive"] }
+schemars = { version = "0.8", features = ["derive"] }
